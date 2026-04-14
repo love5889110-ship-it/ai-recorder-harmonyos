@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "AI对话助手"
+    },
+    {
+      "name": "microphone_reason",
+      "value": "需要麦克风权限以自动检测并录制对话"
+    }
+  ]
+}

@@ -97,6 +97,16 @@ export class RecorderService {
 
     try {
       this.audioCapturer = await audio.createAudioCapturer(capturerOptions);
+      // 监听音频中断（电话/其他App抢占麦克风）
+      this.audioCapturer.on('audioInterrupt', (interruptEvent: audio.InterruptEvent) => {
+        if (interruptEvent.forceType === audio.InterruptForceType.INTERRUPT_FORCE) {
+          // 被系统强制中断（如来电），重置状态，通话结束后重新监听
+          AppStorage.set<string>('vadDebug', '📞 麦克风被中断，等待恢复...');
+          this.audioCapturer = null;
+          this.setState(RecorderState.IDLE);
+          setTimeout(() => { this.startListening(); }, 5000);
+        }
+      });
       await this.audioCapturer.start();
       this.micRetryCount = 0; // 成功后重置重试计数
       this.vadActiveFrames = [];
@@ -217,6 +227,15 @@ export class RecorderService {
     try {
       this.avRecorder = await media.createAVRecorder();
       await this.avRecorder.prepare(avConfig);
+      // 监听录音中断（来电/其他App抢占），中断后保存已录内容并恢复监听
+      this.avRecorder.on('stateChange', async (state: media.AVRecorderState) => {
+        if (state === 'error' || state === 'idle') {
+          if (this.state === RecorderState.RECORDING) {
+            AppStorage.set<string>('vadDebug', '📞 录音被中断，保存并恢复监听...');
+            await this.stopRecordingAndRestart();
+          }
+        }
+      });
       await this.avRecorder.start();
       this.setState(RecorderState.RECORDING);
       AppStorage.set<string>('vadDebug', '录音中');

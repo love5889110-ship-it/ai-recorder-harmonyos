@@ -123,6 +123,12 @@ export default class EntryAbility extends UIAbility {
 
   onForeground(): void {
     hilog.info(DOMAIN, TAG, 'onForeground');
+    // App 从后台恢复时，若 VAD 已停止则重新启动
+    const currentState = AppStorage.get<string>('recorderState');
+    if (currentState === 'idle' && this.recorderService) {
+      hilog.info(DOMAIN, TAG, 'onForeground: 检测到 IDLE，重新启动监听');
+      this.recorderService.startListening();
+    }
   }
 
   onDestroy(): void {

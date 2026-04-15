@@ -12,11 +12,11 @@ import util from '@ohos.util';
 const TAG = 'RecorderService';
 
 const REC_SAMPLE_RATE = 16000;
-const VAD_THRESHOLD = 0.015;      // 提高阈值，过滤环境噪音/键盘声
+const VAD_THRESHOLD = 0.012;      // 适中阈值，平衡灵敏度和误触发
 const VAD_WINDOW_MS = 3000;
-const VAD_ACTIVE_RATIO = 0.5;     // 需要50%帧有声才触发（更严格）
-const SILENCE_STOP_MS = 180000;   // 3分钟无声才停止
-const REC_VAD_THRESHOLD = 0.010;  // 录音中声音检测阈值（有声则重置静音计时）
+const VAD_ACTIVE_RATIO = 0.4;     // 40%帧有声即触发，降低漏录概率
+const SILENCE_STOP_MS = 600000;   // 10分钟无声才停止（保证一场会议完整录制）
+const REC_VAD_THRESHOLD = 0.010;  // 录音中声音检测阈值
 
 // 家庭WiFi SSID列表（连接时不录音）
 const HOME_WIFI_SSIDS: string[] = ['chinanet-1802', '18025g'];

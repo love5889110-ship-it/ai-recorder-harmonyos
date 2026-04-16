@@ -106,7 +106,7 @@ export class RecorderService {
           this.audioCapturer = null;
           this.setState(RecorderState.IDLE);
           try { await cap?.stop(); await cap?.release(); } catch {}
-          setTimeout(() => { this.micRetryCount = 0; this.startListening(); }, 5000);
+          setTimeout(() => { this.micRetryCount = 0; this.startListening(); }, 1500);
         }
       });
       await this.audioCapturer.start();
@@ -122,10 +122,10 @@ export class RecorderService {
       }
       this.setState(RecorderState.IDLE);
       this.micRetryCount++;
-      // 前3次快速重试（3/6/9秒），之后每30秒无限重试，确保通话结束后能自动恢复
+      // 前3次快速重试（1/2/3秒），之后每5秒持续重试，拒接电话后能快速恢复
       const delay = this.micRetryCount <= this.MIC_MAX_RETRY
-        ? 3000 * this.micRetryCount
-        : 30000;
+        ? 1000 * this.micRetryCount
+        : 5000;
       AppStorage.set<string>('micError', `麦克风启动失败，${delay/1000}秒后重试...（${JSON.stringify(e)}）`);
       setTimeout(() => { this.startListening(); }, delay);
     }

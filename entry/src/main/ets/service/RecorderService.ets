@@ -98,13 +98,15 @@ export class RecorderService {
     try {
       this.audioCapturer = await audio.createAudioCapturer(capturerOptions);
       // 监听音频中断（电话/其他App抢占麦克风）
-      this.audioCapturer.on('audioInterrupt', (interruptEvent: audio.InterruptEvent) => {
+      this.audioCapturer.on('audioInterrupt', async (interruptEvent: audio.InterruptEvent) => {
         if (interruptEvent.forceType === audio.InterruptForceType.INTERRUPT_FORCE) {
-          // 被系统强制中断（如来电），重置状态，通话结束后重新监听
+          // 被系统强制中断（如来电），先释放资源再重置状态
           AppStorage.set<string>('vadDebug', '📞 麦克风被中断，等待恢复...');
+          const cap = this.audioCapturer;
           this.audioCapturer = null;
           this.setState(RecorderState.IDLE);
-          setTimeout(() => { this.startListening(); }, 5000);
+          try { await cap?.stop(); await cap?.release(); } catch {}
+          setTimeout(() => { this.micRetryCount = 0; this.startListening(); }, 5000);
         }
       });
       await this.audioCapturer.start();
@@ -115,19 +117,17 @@ export class RecorderService {
       this.readVAD();
     } catch (e) {
       if (this.audioCapturer) {
-        try { await this.audioCapturer.release(); } catch {}
+        try { await this.audioCapturer.stop(); await this.audioCapturer.release(); } catch {}
         this.audioCapturer = null;
       }
       this.setState(RecorderState.IDLE);
       this.micRetryCount++;
-      if (this.micRetryCount <= this.MIC_MAX_RETRY) {
-        const delay = 3000 * this.micRetryCount;
-        AppStorage.set<string>('micError', `麦克风重试中 ${this.micRetryCount}/${this.MIC_MAX_RETRY}...`);
-        setTimeout(() => { this.startListening(); }, delay);
-      } else {
-        AppStorage.set<string>('micError', `麦克风启动失败（请检查权限）：${JSON.stringify(e)}`);
-        this.micRetryCount = 0;
-      }
+      // 前3次快速重试（3/6/9秒），之后每30秒无限重试，确保通话结束后能自动恢复
+      const delay = this.micRetryCount <= this.MIC_MAX_RETRY
+        ? 3000 * this.micRetryCount
+        : 30000;
+      AppStorage.set<string>('micError', `麦克风启动失败，${delay/1000}秒后重试...（${JSON.stringify(e)}）`);
+      setTimeout(() => { this.startListening(); }, delay);
     }
   }
 
